@@ -7,8 +7,17 @@
 
 ** Description:
 
-The script will take the tweets stored helpline tweets resource file and send
-them at a specified interval.
+Use the -c / --config option to specify a configuration for the script (see
+provided resources/config_template.json) file.  Modify this file with your
+Twitter credentials from https://apps.twitter.com/.
+
+Use the -t / --tweets option to specify a list of tweets to send.  The file
+should be a UTF-8 text file with one tweet per line.
+
+The script will send each of the tweets in the provided tweets file and with a
+wait between tweets.  The wait will be based on the configured tweet_shift
+(in seconds) divided by the number of tweets to send.  The default tweet_shift
+is 14400 seconds (4 hours).
 
 *******************************************************************************
 """
@@ -67,7 +76,6 @@ def send_tweet(twitter_api, tweet, retry=0):
         logger.error('Problem sending tweet. Retrying (Retry = {})...'.format(retry + 1))
         time.sleep(5.0)
         send_tweet(twitter_api, tweet, retry + 1)
-        retry += 1
 
 
 ###############################################################################
