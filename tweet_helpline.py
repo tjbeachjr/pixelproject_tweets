@@ -48,6 +48,11 @@ def send_helpline_tweets(config, tweets_file):
     with codecs.open(tweets_file, 'r', 'utf8') as infile:
         for line in infile:
             tweet = line.rstrip()
+            if len(tweet) > 140:
+                logger.error(u'Tweet is too long: {}'.format(repr(tweet)))
+                continue
+            if not tweet:
+                continue
             tweets.append(tweet)
 
     # Tweet the articles
@@ -66,20 +71,17 @@ def send_helpline_tweets(config, tweets_file):
         counter += 1
 
 
-def send_tweet(twitter_api, tweet, retry=0):
-    if retry > 9:
-        logger.error('Maximum number of retries reached!')
-        return
+def send_tweet(twitter_api, tweet):
     try:
         twitter_api.update_status(tweet)
         return True
     except tweepy.error.TweepError as e:
-        error_code = e.message[0]['code']
-        logger.error(u'Error sending tweet: {}'.format(e.message))
-        if error_code == 187:
-            logger.error(u'Received duplicate tweet error.  Skipping...')
-            return False
-        return send_tweet(twitter_api, tweet, retry + 1)
+        logger.error(u'Error sending tweet')
+        for i in range(0, len(e.message)):
+            error = e.message[i]
+            logger.error(u'Error {} - Code: {} - Message: {}'.format(i + 1,
+                                                                     error['code'],
+                                                                     error['status']))
 
 
 ###############################################################################
