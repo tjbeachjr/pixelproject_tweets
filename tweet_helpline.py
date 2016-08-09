@@ -51,17 +51,18 @@ def send_helpline_tweets(config, tweets_file):
             tweets.append(tweet)
 
     # Tweet the articles
-    logger.info('Sending {} new tweets'.format(len(tweets)))
+    logger.info(u'Sending {} new tweets'.format(len(tweets)))
     wait_time = config['tweet_shift'] / len(tweets)
     counter = 0
+    wait = True
     for tweet in tweets:
-        if counter:
-            logger.info('Waiting {} seconds before sending next tweet'.format(wait_time))
+        if counter and wait:
+            logger.info(u'Waiting {} seconds before sending next tweet'.format(wait_time))
             time.sleep(wait_time)
-        logger.info('Sending tweet {} of {} - Tweet contents: {}'.format(counter + 1,
-                                                                         len(tweets),
-                                                                         tweet))
-        send_tweet(twitter_api, tweet)
+        logger.info(u'Sending tweet {} of {} - Tweet contents: {}'.format(counter + 1,
+                                                                          len(tweets),
+                                                                          tweet))
+        wait = send_tweet(twitter_api, tweet)
         counter += 1
 
 
@@ -71,11 +72,14 @@ def send_tweet(twitter_api, tweet, retry=0):
         return
     try:
         twitter_api.update_status(tweet)
-        return
-    except:
-        logger.error('Problem sending tweet. Retrying (Retry = {})...'.format(retry + 1))
-        time.sleep(5.0)
-        send_tweet(twitter_api, tweet, retry + 1)
+        return True
+    except tweepy.error.TweepError as e:
+        error_code = e.message[0]['code']
+        logger.error(u'Error sending tweet: {}'.format(e.message))
+        if error_code == 187:
+            logger.error(u'Received duplicate tweet error.  Skipping...')
+            return False
+        return send_tweet(twitter_api, tweet, retry + 1)
 
 
 ###############################################################################
