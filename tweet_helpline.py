@@ -81,7 +81,7 @@ def send_tweet(twitter_api, tweet):
             error = e.message[i]
             logger.error(u'Error {} - Code: {} - Message: {}'.format(i + 1,
                                                                      error['code'],
-                                                                     error['status']))
+                                                                     error['message']))
 
 
 ###############################################################################
@@ -112,6 +112,4 @@ if __name__ == '__main__':
         parser.error('Could not find specified helpline tweets file')
 
     with open(options.config) as fp:
-        config = json.load(fp)
-
-    send_helpline_tweets(config, options.tweets)
+        send_helpline_tweets(json.load(fp), options.tweets)
