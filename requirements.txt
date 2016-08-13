@@ -1,2 +1,5 @@
+gspread
+oauth2client
+PyOpenSSL
 tweepy==3.5.0
 urllib3[secure]
