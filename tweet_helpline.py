@@ -100,12 +100,10 @@ def send_tweet(twitter_api, tweet):
         twitter_api.update_status(tweet)
         return True
     except tweepy.error.TweepError as e:
-        logger.error(u'Error sending tweet')
-        for i in range(0, len(e.message)):
-            error = e.message[i]
-            logger.error(u'Error {} - Code: {} - Message: {}'.format(i + 1,
-                                                                     error['code'],
-                                                                     error['message']))
+        try:
+            logger.error(u'Error sending tweet: [{}]'.format(e))
+        except:
+            logger.error(u'Error sending tweet')
 
 
 ###############################################################################
