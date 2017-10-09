@@ -57,7 +57,8 @@ def send_helpline_tweets(config, test_mode=False):
 
         gclient = gspread.authorize(credentials)
         spreadsheet = gclient.open_by_key(config['helpline_tweets_doc_key'])
-        worksheet = spreadsheet.sheet1
+        sheet_number = config.get('sheet_number', 0)
+        worksheet = spreadsheet.get_worksheet(sheet_number)
         values_list = worksheet.col_values(1)
     except gspread.SpreadsheetNotFound:
         logger.error('Unable to open HelpLine tweets spreadsheet')
