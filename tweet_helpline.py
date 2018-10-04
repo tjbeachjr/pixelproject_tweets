@@ -70,7 +70,7 @@ def send_helpline_tweets(config, test_mode=False):
     tweets = []
     for item in values_list:
         tweet = item.rstrip()
-        if len(tweet) > 140:
+        if len(tweet) > 280:
             logger.error(u'Tweet is too long: {}'.format(repr(tweet)))
             continue
         if not tweet:
