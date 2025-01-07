@@ -30,9 +30,10 @@ import gspread
 import json
 import logging
 import os
+import requests
 import time
-import tweepy
-from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime, timezone
+from google.oauth2.service_account import Credentials
 from optparse import OptionParser
 
 logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s')
@@ -41,20 +42,29 @@ logger.setLevel(logging.INFO)
 
 
 def send_helpline_tweets(config, test_mode=False):
-    # Login to the Twitter account
-    logger.info('Logging into Twitter account')
-    auth = tweepy.OAuthHandler(config['twitter']['consumer_key'],
-                               config['twitter']['consumer_secret'])
-    auth.set_access_token(config['twitter']['access_token'],
-                          config['twitter']['access_token_secret'])
-    twitter_api = tweepy.API(auth)
+    # Login to the BlueSky account
+    logger.info('Logging into BlueSky account')
+    resp = requests.post(
+        "https://bsky.social/xrpc/com.atproto.server.createSession",
+        json={
+            "identifier": config["bluesky"]["handle"],
+            "password": config["bluesky"]["password"]
+        },
+    )
+    resp.raise_for_status()
+    session = resp.json()
+    access_token = session["accessJwt"]
 
     # Login to the Google Docs API
     logger.info('Open Helpline Tweets Google Doc spreadsheet')
+    values_list = []
     try:
-        scope = ['https://spreadsheets.google.com/feeds']
-        credentials = ServiceAccountCredentials.from_json_keyfile_dict(config['google_docs'], scope)
-
+        credentials = Credentials.from_service_account_info(
+            config['google_docs'],
+            scopes=[
+                "https://www.googleapis.com/auth/spreadsheets"
+            ]
+        )
         gclient = gspread.authorize(credentials)
         spreadsheet = gclient.open_by_key(config['helpline_tweets_doc_key'])
         sheet_number = config.get('sheet_number', 0)
@@ -78,33 +88,39 @@ def send_helpline_tweets(config, test_mode=False):
         tweets.append(tweet)
 
     # Tweet the articles
-    logger.info(u'Sending {} new tweets'.format(len(tweets)))
+    logger.info(f'Sending {len(tweets)} new tweets')
     wait_time = config['tweet_shift'] / len(tweets)
     counter = 0
     wait = True
     for tweet in tweets:
         if counter and wait:
-            logger.info(u'Waiting {} seconds before sending next tweet'.format(wait_time))
+            logger.info(f'Waiting {wait_time} seconds before sending next tweet')
             time.sleep(wait_time)
-        logger.info(u'Sending tweet {} of {} - Tweet contents: {}'.format(counter + 1,
-                                                                          len(tweets),
-                                                                          tweet))
+        logger.info(f'Sending tweet {counter + 1} of {len(tweets)} - Tweet contents: {tweet}')
         if not test_mode:
-            wait = send_tweet(twitter_api, tweet)
+            wait = send_tweet(config["bluesky"]["handle"], access_token, tweet)
         else:
             wait = False
         counter += 1
 
 
-def send_tweet(twitter_api, tweet):
-    try:
-        twitter_api.update_status(tweet)
-        return True
-    except tweepy.error.TweepError as e:
-        try:
-            logger.error(u'Error sending tweet: [{}]'.format(e))
-        except:
-            logger.error(u'Error sending tweet')
+def send_tweet(bluesky_handle, access_token, tweet):
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    post = {
+        "$type": "app.bsky.feed.post",
+        "text": tweet,
+        "createdAt": now,
+    }
+
+    # Send the request
+    headers = {"Authorization": f"Bearer {access_token}"}
+    resp = requests.post(
+        "https://bsky.social/xrpc/com.atproto.repo.createRecord",
+        headers=headers,
+        json={"repo": f"{bluesky_handle}", "collection": "app.bsky.feed.post", "record": post},
+    )
+    logger.info(f"Tweet status code [{resp.status_code}] /  body [{resp.json()}]")
+    return resp.status_code == 200
 
 
 ###############################################################################

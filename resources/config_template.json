@@ -1,9 +1,7 @@
 {
-  "twitter": {
-    "consumer_key": "",
-    "consumer_secret": "",
-    "access_token": "",
-    "access_token_secret": ""
+  "bluesky": {
+    "handle": "",
+    "password": ""
   },
   "tweet_shift": 14400,
   "helpline_tweets_doc_key": "",
