@@ -51,7 +51,13 @@ def send_helpline_tweets(config, test_mode=False):
             "password": config["bluesky"]["password"]
         },
     )
-    resp.raise_for_status()
+    if not resp.ok:
+        logger.error(
+            "BlueSky login failed: status=%s body=%s",
+            resp.status_code,
+            resp.text,
+        )
+        resp.raise_for_status()
     session = resp.json()
     access_token = session["accessJwt"]
 
